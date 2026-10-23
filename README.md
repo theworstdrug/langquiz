@@ -15,7 +15,7 @@ The build is a static site. `.github/workflows/deploy.yml` publishes it to GitHu
 
 ## How it works
 
-1. **Import** something you want to read: pasted text, a web page, an EPUB book, subtitles (SRT/VTT) or a text file. You can attach an audio file or URL.
+1. **Import** something you want to read: pasted text, a web page, an EPUB book, subtitles (SRT/VTT), a text file or a YouTube video. You can attach an audio file or URL.
 2. **Read.** Words you haven't seen are **blue**. Click one to see suggested meanings, then pick one (or type your own) to create a **LingQ** (yellow). Drag across words, or shift-click, to save a **phrase**.
 3. **Turn the page.** Every blue word you didn't LingQ becomes **known**. This is how LingQ counts your known words.
 4. **Review** LingQs with spaced repetition. A correct answer moves a LingQ up from status 1 to 4; a miss sends it back to 1.
@@ -47,6 +47,7 @@ The build is a static site. `.github/workflows/deploy.yml` publishes it to GitHu
 | Lesson library, courses, % new words per lesson | ✅ | Search, sort by fewest new words, "continue studying" |
 | Import text / web page / ebook / subtitles | ✅ | EPUB → course with one lesson per chapter; split long texts into lessons |
 | Audio with lessons, speed control | ✅ | Upload a file or link to one |
+| YouTube lessons | ✅ | Embedded player; paste the transcript from YouTube's "Show transcript" panel (or upload SRT/VTT). The text highlights in sync with the video and you can click a line to jump to it |
 | Subtitle-synced audio (highlight + click to seek) | ✅ | From SRT/VTT imports |
 | Text-to-speech | ✅ | Words, sentences, read a whole page aloud; voice and speed per language |
 | Sentence mode | ✅ | One sentence at a time with translate and TTS |
@@ -62,7 +63,7 @@ The build is a static site. `.github/workflows/deploy.yml` publishes it to GitHu
 | Backup and restore | ✅ | JSON (audio files are not included) |
 | Shared community library, community hints, tutors, forum | ❌ | These need a server and other users |
 | Sync across devices | ❌ | Move data between devices with backup/restore |
-| YouTube / Netflix / podcast import | ❌ | Needs a server-side fetcher; use subtitle files plus an audio URL instead |
+| Automatic YouTube captions, Netflix | ❌ | YouTube blocks caption downloads from browsers, so the transcript is pasted in one step instead |
 | Web page import from any site | ⚠️ | Most sites block reads from the browser; set a CORS proxy in Settings or paste the text |
 
 ## Project layout

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { db, type Course, type Lesson, type Term } from '../lib/db';
 import { deleteCourse, deleteLesson, newWordStats } from '../lib/actions';
 import { useTermMap } from '../lib/hooks';
+import { youtubeThumb } from '../lib/youtube';
 
 type Sort = 'recent' | 'opened' | 'easiest' | 'title';
 
@@ -116,6 +117,7 @@ function LessonCard({ lesson, stats, course }: { lesson: Lesson; stats: ReturnTy
   return (
     <div className="card lesson-card">
       <Link to={`/lesson/${lesson.id}`} className="lesson-link">
+        {lesson.youtubeId && <img className="thumb" src={youtubeThumb(lesson.youtubeId)} alt="" loading="lazy" />}
         <div className="lesson-title">
           {lesson.completed && <span title="Completed">✅ </span>}
           {lesson.title}
@@ -129,7 +131,7 @@ function LessonCard({ lesson, stats, course }: { lesson: Lesson; stats: ReturnTy
             {stats.lingqs} LingQs
           </span>
           <span className="muted small">{lesson.wordCount} words</span>
-          {(lesson.audio || lesson.mediaUrl) && <span title="Has audio">🎧</span>}
+          {lesson.youtubeId ? <span title="YouTube video">🎬</span> : (lesson.audio || lesson.mediaUrl) && <span title="Has audio">🎧</span>}
         </div>
         <div className="bar" title={`${stats.pctNew}% new words`}>
           <div style={{ width: `${100 - stats.pctNew}%` }} />

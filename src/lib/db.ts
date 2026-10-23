@@ -58,6 +58,7 @@ export interface Lesson {
   audio?: Blob;
   audioName?: string;
   mediaUrl?: string;
+  youtubeId?: string;
   sourceUrl?: string;
   tags: string[];
   uniqueWords: string[];

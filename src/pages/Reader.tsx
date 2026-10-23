@@ -10,6 +10,7 @@ import { speak, stopSpeaking } from '../lib/tts';
 import { updateSettings, type Settings } from '../lib/settings';
 import { findPhrases, paginate, phraseKey, sentenceAround, splitSentences, type Paragraph } from '../lib/tokenize';
 import WordPanel, { type Selection } from '../components/WordPanel';
+import MediaPlayer, { type MediaHandle } from '../components/MediaPlayer';
 
 interface Range {
   p: number;
@@ -82,7 +83,7 @@ export default function Reader({ settings }: { settings: Settings }) {
   const [audioUrl, setAudioUrl] = useState<string>();
   const [audioTime, setAudioTime] = useState(0);
   const [followAudio, setFollowAudio] = useState(true);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const mediaRef = useRef<MediaHandle>(null);
   const listened = useRef({ last: 0, pending: 0 });
 
   // Initialise page from the saved position and record the visit.
@@ -224,9 +225,9 @@ export default function Reader({ settings }: { settings: Settings }) {
       else if (e.key === 'k' || e.key === 'K') setStatus(KNOWN);
       else if (e.key === 'x' || e.key === 'X') setStatus(IGNORED);
       else if ((e.key === 'p' || e.key === 'P') && selection) speak(selection.display, lang, { rate: settings.ttsRate, voice: settings.ttsVoice[lang] });
-      else if (e.key === ' ' && audioRef.current) {
+      else if (e.key === ' ' && mediaRef.current) {
         e.preventDefault();
-        audioRef.current.paused ? audioRef.current.play() : audioRef.current.pause();
+        mediaRef.current.isPaused() ? mediaRef.current.play() : mediaRef.current.pause();
       } else return;
       e.preventDefault();
     };
@@ -257,7 +258,7 @@ export default function Reader({ settings }: { settings: Settings }) {
   }, [audioTime, pages, lesson?.segments]);
 
   useEffect(() => {
-    if (followAudio && activeSeg && activeSeg.page !== pageIdx && audioRef.current && !audioRef.current.paused) {
+    if (followAudio && activeSeg && activeSeg.page !== pageIdx && mediaRef.current && !mediaRef.current.isPaused()) {
       setPageIdx(activeSeg.page);
       db.lessons.update(lessonId, { page: activeSeg.page });
     }
@@ -335,9 +336,9 @@ export default function Reader({ settings }: { settings: Settings }) {
 
   const playParagraph = (p: number) => {
     const para = page[p];
-    if (para.start !== undefined && audioRef.current) {
-      audioRef.current.currentTime = para.start;
-      audioRef.current.play();
+    if (para.start !== undefined && mediaRef.current) {
+      mediaRef.current.seek(para.start);
+      mediaRef.current.play();
       return;
     }
     const readFrom = (i: number) => {
@@ -364,6 +365,26 @@ export default function Reader({ settings }: { settings: Settings }) {
   }
 
   const sent = sentences[Math.max(0, Math.min(sentIdx, sentences.length - 1))];
+
+  const hasMedia = !!(audioUrl || lesson.youtubeId);
+  const player = hasMedia && (
+    <MediaPlayer
+      ref={mediaRef}
+      src={audioUrl}
+      youtubeId={lesson.youtubeId}
+      synced={!!lesson.segments}
+      follow={followAudio}
+      onFollowChange={setFollowAudio}
+      onTime={(t) => {
+        const d = t - listened.current.last;
+        if (d > 0 && d < 2) listened.current.pending += d;
+        listened.current.last = t;
+        setAudioTime(t);
+        if (listened.current.pending >= 30) flushListening();
+      }}
+      onPause={flushListening}
+    />
+  );
 
   return (
     <div className={`reader ${selection ? 'has-panel' : ''}`}>
@@ -393,6 +414,8 @@ export default function Reader({ settings }: { settings: Settings }) {
             </button>
           </div>
         </div>
+
+        {lesson.youtubeId && player}
 
         <div
           className="reader-text"
@@ -431,7 +454,7 @@ export default function Reader({ settings }: { settings: Settings }) {
                 <div key={p} className={`para-wrap ${active ? 'active' : ''}`}>
                   <p className="para">{renderTokens(p)}</p>
                   <div className="para-tools">
-                    <button className="icon small" title={para.start !== undefined && audioUrl ? 'Play from here' : 'Read aloud'} onClick={() => playParagraph(p)}>
+                    <button className="icon small" title={para.start !== undefined && hasMedia ? 'Play from here' : 'Read aloud'} onClick={() => playParagraph(p)}>
                       ▶
                     </button>
                     <button className="icon small" title="Translate paragraph" onClick={() => toggleTranslation(r)}>
@@ -462,43 +485,7 @@ export default function Reader({ settings }: { settings: Settings }) {
           <p className="muted small center">Turning the page marks the {pageNew} remaining blue words as known.</p>
         )}
 
-        {audioUrl && (
-          <div className="audio-bar">
-            <audio
-              ref={audioRef}
-              src={audioUrl}
-              controls
-              onTimeUpdate={(e) => {
-                const t = e.currentTarget.currentTime;
-                const d = t - listened.current.last;
-                if (d > 0 && d < 2) listened.current.pending += d;
-                listened.current.last = t;
-                setAudioTime(t);
-                if (listened.current.pending >= 30) flushListening();
-              }}
-              onPause={flushListening}
-            />
-            <select
-              aria-label="Playback speed"
-              defaultValue="1"
-              onChange={(e) => audioRef.current && (audioRef.current.playbackRate = Number(e.target.value))}
-            >
-              {[0.5, 0.75, 0.9, 1, 1.25, 1.5].map((r) => (
-                <option key={r} value={r}>
-                  {r}×
-                </option>
-              ))}
-            </select>
-            <button className="icon" title="Back 5s" onClick={() => audioRef.current && (audioRef.current.currentTime -= 5)}>
-              ⏪
-            </button>
-            {lesson.segments && (
-              <label className="small row">
-                <input type="checkbox" checked={followAudio} onChange={(e) => setFollowAudio(e.target.checked)} /> follow
-              </label>
-            )}
-          </div>
-        )}
+        {!lesson.youtubeId && player}
       </div>
 
       {selection && (

@@ -6,8 +6,9 @@ import { createLesson, ensureCourse } from '../lib/actions';
 import { importEpub, importUrl, parseSubtitles, htmlToText, parseHtml, splitIntoLessons } from '../lib/importers';
 import { getSettings } from '../lib/settings';
 import type { TimedSegment } from '../lib/tokenize';
+import { fetchYouTubeTitle, mergeCues, parseYouTubeId, parseYouTubeTranscript, youtubeThumb } from '../lib/youtube';
 
-type Mode = 'text' | 'file' | 'url';
+type Mode = 'text' | 'file' | 'url' | 'youtube';
 
 export default function Import({ lang }: { lang: string }) {
   const nav = useNavigate();
@@ -25,6 +26,10 @@ export default function Import({ lang }: { lang: string }) {
   const [split, setSplit] = useState(false);
   const [splitWords, setSplitWords] = useState(1500);
   const [busy, setBusy] = useState('');
+  const [ytUrl, setYtUrl] = useState('');
+  const [ytId, setYtId] = useState<string | null>(null);
+  const [rawCues, setRawCues] = useState<TimedSegment[] | null>(null);
+  const [merge, setMerge] = useState(true);
   const [error, setError] = useState('');
 
   const resolveCourse = async (): Promise<number | undefined> => {
@@ -92,9 +97,27 @@ export default function Import({ lang }: { lang: string }) {
     }
   };
 
+  const applyCues = (cues: TimedSegment[], doMerge = merge) => {
+    setRawCues(cues);
+    const segs = doMerge ? mergeCues(cues) : cues;
+    setSegments(segs);
+    setText(segs.map((x) => x.text).join('\n'));
+  };
+
+  const onYouTubeUrl = async (value: string) => {
+    setYtUrl(value);
+    const vid = parseYouTubeId(value);
+    setYtId(vid);
+    if (vid && !title) {
+      const t = await fetchYouTubeTitle(vid);
+      if (t) setTitle((cur) => cur || t);
+    }
+  };
+
   const save = async () => {
     setError('');
-    if (!text.trim()) return setError('Add some text first.');
+    if (!text.trim()) return setError(mode === 'youtube' ? 'Paste the video transcript (or upload subtitles) first.' : 'Add some text first.');
+    if (mode === 'youtube' && !ytId) return setError('Enter a valid YouTube link.');
     setBusy('Saving…');
     try {
       let courseId = await resolveCourse();
@@ -103,11 +126,13 @@ export default function Import({ lang }: { lang: string }) {
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
         audio: audio ?? undefined,
         audioName: audio?.name,
-        mediaUrl: mediaUrl.trim() || undefined,
-        sourceUrl: mode === 'url' ? url : undefined,
+        mediaUrl: parseYouTubeId(mediaUrl) ? undefined : mediaUrl.trim() || undefined,
+        sourceUrl: mode === 'url' ? url : mode === 'youtube' ? ytUrl : undefined,
+        // A YouTube link in the media URL field also gets the embedded player.
+        youtubeId: (mode === 'youtube' ? ytId : parseYouTubeId(mediaUrl)) ?? undefined,
       };
       const t = title.trim() || text.trim().slice(0, 40);
-      if (split && !segments && text.split(/\s+/).length > splitWords) {
+      if (split && mode !== 'youtube' && !segments && text.split(/\s+/).length > splitWords) {
         courseId ??= await ensureCourse(lang, t);
         const parts = splitIntoLessons(text, splitWords);
         for (const [i, part] of parts.entries()) {
@@ -127,9 +152,9 @@ export default function Import({ lang }: { lang: string }) {
     <div className="import">
       <h1>Import a lesson</h1>
       <div className="tabs">
-        {(['text', 'file', 'url'] as Mode[]).map((m) => (
+        {(['text', 'file', 'url', 'youtube'] as Mode[]).map((m) => (
           <button key={m} className={mode === m ? 'active' : ''} onClick={() => setMode(m)}>
-            {m === 'text' ? 'Paste text' : m === 'file' ? 'Upload file' : 'From web page'}
+            {m === 'text' ? 'Paste text' : m === 'file' ? 'Upload file' : m === 'url' ? 'From web page' : 'YouTube'}
           </button>
         ))}
       </div>
@@ -152,6 +177,67 @@ export default function Import({ lang }: { lang: string }) {
               </button>
             </div>
           </label>
+        )}
+
+        {mode === 'youtube' && (
+          <>
+            <label>
+              YouTube link
+              <input type="url" placeholder="https://www.youtube.com/watch?v=…" value={ytUrl} onChange={(e) => onYouTubeUrl(e.target.value)} />
+            </label>
+            {ytId && (
+              <div className="yt-preview">
+                <img src={youtubeThumb(ytId)} alt="" />
+                <ol className="muted small">
+                  <li>
+                    On YouTube, open the video, click <strong>…more</strong> under it, then <strong>Show transcript</strong>.
+                  </li>
+                  <li>Pick the language you're learning from the transcript menu if there's a choice.</li>
+                  <li>Select the whole transcript, copy it, and paste it below. Timestamps are kept so the text follows the video.</li>
+                </ol>
+              </div>
+            )}
+            <label>
+              Transcript
+              <textarea
+                rows={6}
+                placeholder={'0:00\nHola a todos…\n0:04\nBienvenidos…'}
+                onChange={(e) => {
+                  const cues = parseYouTubeTranscript(e.target.value);
+                  if (cues.length) applyCues(cues);
+                  else {
+                    setRawCues(null);
+                    setSegments(undefined);
+                    setText(e.target.value);
+                  }
+                }}
+              />
+              <span className="muted small">
+                …or upload subtitles (.srt/.vtt):{' '}
+                <input
+                  type="file"
+                  accept=".srt,.vtt"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (f) applyCues(parseSubtitles(await f.text()));
+                  }}
+                />
+              </span>
+            </label>
+            {rawCues && (
+              <label className="row">
+                <input
+                  type="checkbox"
+                  checked={merge}
+                  onChange={(e) => {
+                    setMerge(e.target.checked);
+                    applyCues(rawCues, e.target.checked);
+                  }}
+                />
+                Join short caption lines into sentences ({rawCues.length} lines → {mergeCues(rawCues).length})
+              </label>
+            )}
+          </>
         )}
 
         <label>
@@ -191,18 +277,18 @@ export default function Import({ lang }: { lang: string }) {
           </label>
         </div>
 
-        <div className="cols">
+        {mode !== 'youtube' && <div className="cols">
           <label>
             Audio file (optional)
             <input type="file" accept="audio/*,video/*" onChange={(e) => setAudio(e.target.files?.[0] ?? null)} />
           </label>
           <label>
             …or audio/video URL
-            <input value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://…/episode.mp3" />
+            <input value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://…/episode.mp3 or a YouTube link" />
           </label>
-        </div>
+        </div>}
 
-        {!segments && (
+        {!segments && mode !== 'youtube' && (
           <label className="row">
             <input type="checkbox" checked={split} onChange={(e) => setSplit(e.target.checked)} />
             Split long text into a course of lessons of about
