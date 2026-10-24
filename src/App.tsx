@@ -14,6 +14,7 @@ import DailyGoal from './components/DailyGoal';
 import NavIcon from './components/NavIcon';
 import SyncIndicator from './components/SyncIndicator';
 import { startAutoSync } from './lib/sync';
+import { startReminderChecks } from './lib/reminders';
 
 const NAV: [string, string, string][] = [
   ['/', 'Library', 'library'],
@@ -27,7 +28,10 @@ const NAV: [string, string, string][] = [
 export default function App() {
   const settings = useSettings();
 
-  useEffect(() => startAutoSync(), []);
+  useEffect(() => {
+    startAutoSync();
+    startReminderChecks();
+  }, []);
 
   // Expose the top bar's height so sticky elements (e.g. a pinned video) can sit below it.
   const topbar = useRef<HTMLElement>(null);

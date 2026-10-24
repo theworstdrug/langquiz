@@ -422,3 +422,12 @@ html { font-size: clamp(15px, 14px + 0.15vw, 17px); -webkit-text-size-adjust: 10
 .method-card.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .method-card:disabled { opacity: 0.55; }
 @media (max-width: 599px) { .method-picker { grid-template-columns: 1fr; } }
+
+/* Reminders */
+.reminder-grid { display: grid; grid-template-columns: minmax(120px, 180px) 1fr; gap: 12px; align-items: end; }
+.label-text { font-weight: 500; margin-bottom: 4px; }
+.day-picker { display: flex; gap: 4px; flex-wrap: wrap; }
+.day-picker button { flex: 1; justify-content: center; min-width: 44px; padding: 0.45em 0.2em; }
+.day-picker button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.reminder-notes p { margin: 0; }
+@media (max-width: 599px) { .reminder-grid { grid-template-columns: 1fr; } }

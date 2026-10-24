@@ -62,6 +62,19 @@ The client ID is not a secret: it only identifies the app to Google. It uses the
 
 On a new device, choose **"Already use LangQuiz on another device? Restore your data"** on the welcome screen.
 
+## Study reminders
+
+Set these up in **Settings → Study reminders**: a time, which days, and whether to skip the reminder once you've met today's goal. The notification says how many LingQs are left, how many reviews are due and your current streak. Tapping it opens Review if anything is due, otherwise the Library. Reminders are per device and fire at most once a day.
+
+A static site has no push server, so how a reminder can reach you depends on the browser:
+
+| Where | How it arrives |
+| --- | --- |
+| LangQuiz open in any tab (even in the background) | On time; the app checks every minute |
+| LangQuiz installed as an app in Chrome or Edge (desktop or Android) | Also while it's closed, through periodic background checks. The browser decides how often, so it may come a little late |
+| iPhone and iPad | Only after **Add to Home Screen**, and only while the app is open; iOS doesn't allow background checks |
+| Anywhere | **Add reminder to my calendar** downloads a repeating `.ics` event with an alert. This is the option that always fires |
+
 ## Themes and layouts
 
 - **Themes:** System, Light, Dark and **OLED black**. OLED uses true black so the pixels switch off on OLED screens. The browser's address bar and status bar color follows the theme.
@@ -128,4 +141,5 @@ On a new device, choose **"Already use LangQuiz on another device? Restore your 
 - `src/lib/`: the logic, written as plain TypeScript. It covers tokenizing and pagination, phrase matching, the Dexie database schema, the SRS scheduler, importers, dictionary lookups, TTS, backups and stats. Unit tests are in `src/lib/__tests__/`.
 - `src/lib/sync/`: sync. `snapshot.ts` handles snapshots, merging and applying. `engine.ts` runs one round with the Drive API, and `folder.ts` handles the sync-folder layout and the browser's file-access interface. These are tested with simulated devices. `drive.ts` talks to Google, and `index.ts` handles method choice, scheduling and status.
 - `src/pages/`: Library, Import, Reader, Vocabulary, Review, Stats, Settings and Onboarding.
-- `src/components/`: the word panel, the daily-goal widget and the bar chart.
+- `src/components/`: the word panel, the daily-goal widget, the bar chart, and the sync and reminder settings.
+- `src/sw.ts`: the service worker, which handles offline caching and reminder checks. `src/reminders-core.ts` holds the reminder logic and is unit-tested. The worker is built separately (`vite.sw.config.ts`) as one self-contained script.

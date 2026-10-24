@@ -19,7 +19,7 @@ export interface SyncFile {
 }
 
 /** Settings that describe this device rather than the learner, so they stay local. */
-export const LOCAL_ONLY_SETTINGS = new Set(['activeLang', 'theme', 'ttsVoice', 'fontSize', 'lineHeight']);
+export const LOCAL_ONLY_SETTINGS = new Set(['activeLang', 'theme', 'ttsVoice', 'fontSize', 'lineHeight', 'reminder', 'reminderLastShown']);
 
 const TOMBSTONE_TTL = 365 * 86_400_000;
 

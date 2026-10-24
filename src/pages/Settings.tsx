@@ -6,6 +6,7 @@ import { download, exportBackup, importBackup } from '../lib/backup';
 import { seedSample } from '../lib/sample';
 import { speak, ttsSupported, voicesFor } from '../lib/tts';
 import SyncSettings from '../components/SyncSettings';
+import ReminderSettings from '../components/ReminderSettings';
 
 export default function SettingsPage({ settings }: { settings: Settings }) {
   const lang = settings.activeLang;
@@ -82,6 +83,8 @@ export default function SettingsPage({ settings }: { settings: Settings }) {
       </section>
 
       <SyncSettings />
+
+      <ReminderSettings settings={settings} />
 
       <section className="card form">
         <h2>Reading</h2>

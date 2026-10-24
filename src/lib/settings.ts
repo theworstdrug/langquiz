@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
+import { DEFAULT_REMINDER, type ReminderSettings } from '../reminders-core';
 
 export interface DictionarySource {
   name: string;
@@ -23,6 +24,7 @@ export interface Settings {
   autoPronounce: boolean;
   dictionaries: DictionarySource[];
   corsProxy: string;
+  reminder: ReminderSettings;
 }
 
 export const DEFAULT_DICTIONARIES: DictionarySource[] = [
@@ -50,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoPronounce: false,
   dictionaries: DEFAULT_DICTIONARIES,
   corsProxy: '',
+  reminder: DEFAULT_REMINDER,
 };
 
 export async function getSettings(): Promise<Settings> {

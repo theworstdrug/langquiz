@@ -6,7 +6,7 @@
   "description": "A local-first language learning reader with LingQ-style feature parity",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && vite build --config vite.sw.config.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b"
