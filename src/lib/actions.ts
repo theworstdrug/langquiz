@@ -1,4 +1,4 @@
-import { db, KNOWN, type Activity, type Lesson, type Status, type Term } from './db';
+import { db, deviceId, uuid, KNOWN, termKey, type Activity, type Deletion, type Lesson, type Status, type SyncedTable, type Term } from './db';
 import { newSrsFields, scheduleForStatus } from './srs';
 import { uniqueWords } from './tokenize';
 
@@ -14,14 +14,17 @@ type Counter = 'wordsRead' | 'lingqsCreated' | 'knownAdded' | 'listeningSeconds'
 export async function bumpActivity(lang: string, field: Counter, amount = 1) {
   if (!amount) return;
   const date = today();
+  const device = deviceId();
   await db.transaction('rw', db.activity, async () => {
-    const row = await db.activity.where({ lang, date }).first();
+    const row = await db.activity.where({ lang, date, device }).first();
     if (row) {
       await db.activity.update(row.id!, { [field]: (row[field] ?? 0) + amount });
     } else {
       const fresh: Activity = {
         lang,
         date,
+        device,
+        updatedAt: Date.now(),
         wordsRead: 0,
         lingqsCreated: 0,
         knownAdded: 0,
@@ -108,18 +111,34 @@ export async function markWordsKnown(lang: string, words: string[]) {
   return fresh.length;
 }
 
+function tombstones(table: SyncedTable, keys: string[]): Deletion[] {
+  const deletedAt = Date.now();
+  return keys.map((recordKey) => ({ key: `${table}:${recordKey}`, table, recordKey, deletedAt }));
+}
+
+export async function deleteTerms(ids: number[]) {
+  await db.transaction('rw', db.terms, db.deletions, async () => {
+    const terms = (await db.terms.bulkGet(ids)).filter((t): t is Term => !!t);
+    await db.deletions.bulkPut(tombstones('terms', terms.map(termKey)));
+    await db.terms.bulkDelete(ids);
+  });
+}
+
 export async function deleteTerm(id: number) {
-  await db.terms.delete(id);
+  await deleteTerms([id]);
 }
 
 export async function createLesson(
   input: Pick<Lesson, 'lang' | 'title' | 'text'> & Partial<Lesson>,
 ): Promise<number> {
+  const now = Date.now();
   const { unique, count } = uniqueWords(input.text, input.lang);
   const order = input.courseId ? await db.lessons.where({ courseId: input.courseId }).count() : 0;
   return db.lessons.add({
+    uid: uuid(),
+    updatedAt: now,
     tags: [],
-    createdAt: Date.now(),
+    createdAt: now,
     page: 0,
     completed: false,
     timesCompleted: 0,
@@ -139,21 +158,31 @@ export async function updateLessonText(id: number, lang: string, patch: Partial<
 }
 
 export async function deleteLesson(id: number) {
-  await db.lessons.delete(id);
+  await db.transaction('rw', db.lessons, db.deletions, async () => {
+    const lesson = await db.lessons.get(id);
+    if (lesson) await db.deletions.bulkPut(tombstones('lessons', [lesson.uid]));
+    await db.lessons.delete(id);
+  });
 }
 
 export async function deleteCourse(id: number, withLessons: boolean) {
-  await db.transaction('rw', db.courses, db.lessons, async () => {
-    if (withLessons) await db.lessons.where({ courseId: id }).delete();
-    else await db.lessons.where({ courseId: id }).modify({ courseId: undefined });
+  await db.transaction('rw', db.courses, db.lessons, db.deletions, async () => {
+    const course = await db.courses.get(id);
+    const lessons = await db.lessons.where({ courseId: id }).toArray();
+    if (withLessons) {
+      await db.deletions.bulkPut(tombstones('lessons', lessons.map((l) => l.uid)));
+      await db.lessons.bulkDelete(lessons.map((l) => l.id!));
+    } else await db.lessons.where({ courseId: id }).modify({ courseId: undefined });
+    if (course) await db.deletions.bulkPut(tombstones('courses', [course.uid]));
     await db.courses.delete(id);
   });
 }
 
-export async function ensureCourse(lang: string, title: string): Promise<number> {
+export async function ensureCourse(lang: string, title: string, uid = uuid()): Promise<number> {
   const existing = await db.courses.where({ lang }).filter((c) => c.title === title).first();
   if (existing) return existing.id!;
-  return db.courses.add({ lang, title, description: '', createdAt: Date.now() });
+  const now = Date.now();
+  return db.courses.add({ uid, updatedAt: now, lang, title, description: '', createdAt: now });
 }
 
 /** Fraction of a lesson's unique words that are still new (no term record). */

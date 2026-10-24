@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { db, KNOWN, STATUS_LABELS, type Status, type Term } from '../lib/db';
-import { upsertTerm } from '../lib/actions';
+import { deleteTerms, upsertTerm } from '../lib/actions';
 import { download, parseCsv, toCsv } from '../lib/backup';
 import { normalize } from '../lib/tokenize';
 import { speak } from '../lib/tts';
@@ -175,7 +175,7 @@ export default function Vocabulary({ settings }: { settings: Settings }) {
               className="danger"
               onClick={async () => {
                 if (!confirm(`Delete ${selected.size} terms? They become new (blue) words again.`)) return;
-                await db.terms.bulkDelete([...selected]);
+                await deleteTerms([...selected]);
                 setSelected(new Set());
               }}
             >

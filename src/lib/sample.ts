@@ -1,4 +1,5 @@
 import { createLesson, ensureCourse } from './actions';
+import { db } from './db';
 
 const SAMPLES: Record<string, { title: string; text: string }> = {
   es: {
@@ -48,6 +49,11 @@ Ao fim da tarde, gosto de ver o pôr do sol no miradouro com os meus amigos.`,
 export async function seedSample(lang: string) {
   const s = SAMPLES[lang];
   if (!s) return;
-  const courseId = await ensureCourse(lang, 'Getting started');
-  await createLesson({ lang, title: s.title, text: s.text, courseId });
+  // Fixed ids (and an old timestamp) so the sample from several synced devices merges into one copy.
+  const uid = `sample-${lang}`;
+  if (await db.lessons.where({ uid }).count()) return;
+  const courseId = await ensureCourse(lang, 'Getting started', `sample-course-${lang}`);
+  await db.courses.update(courseId, { updatedAt: 1 });
+  const id = await createLesson({ lang, title: s.title, text: s.text, courseId, uid });
+  await db.lessons.update(id, { updatedAt: 1 });
 }

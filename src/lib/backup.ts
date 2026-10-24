@@ -1,29 +1,32 @@
 import { db } from './db';
 
 export async function exportBackup(): Promise<Blob> {
-  const [terms, courses, lessons, activity, settings] = await Promise.all([
+  const [terms, courses, lessons, activity, settings, deletions] = await Promise.all([
     db.terms.toArray(),
     db.courses.toArray(),
     db.lessons.toArray(),
     db.activity.toArray(),
     db.settings.toArray(),
+    db.deletions.toArray(),
   ]);
   // Audio blobs are not serialisable to JSON; they are omitted from backups.
   const plainLessons = lessons.map(({ audio: _audio, ...rest }) => rest);
-  const payload = { app: 'langquiz', version: 1, exportedAt: new Date().toISOString(), terms, courses, lessons: plainLessons, activity, settings };
+  const payload = { app: 'langquiz', version: 1, exportedAt: new Date().toISOString(), terms, courses, lessons: plainLessons, activity, settings, deletions };
   return new Blob([JSON.stringify(payload)], { type: 'application/json' });
 }
 
 export async function importBackup(json: string) {
   const data = JSON.parse(json);
   if (data?.app !== 'langquiz') throw new Error('Not a langquiz backup file');
-  await db.transaction('rw', [db.terms, db.courses, db.lessons, db.activity, db.settings], async () => {
-    await Promise.all([db.terms.clear(), db.courses.clear(), db.lessons.clear(), db.activity.clear(), db.settings.clear()]);
+  // Older backups lack uid/updatedAt/device; the database hooks fill them in on insert.
+  await db.transaction('rw', [db.terms, db.courses, db.lessons, db.activity, db.settings, db.deletions], async () => {
+    await Promise.all([db.terms.clear(), db.courses.clear(), db.lessons.clear(), db.activity.clear(), db.settings.clear(), db.deletions.clear()]);
     await db.terms.bulkAdd(data.terms ?? []);
     await db.courses.bulkAdd(data.courses ?? []);
     await db.lessons.bulkAdd(data.lessons ?? []);
     await db.activity.bulkAdd(data.activity ?? []);
     await db.settings.bulkAdd(data.settings ?? []);
+    await db.deletions.bulkAdd(data.deletions ?? []);
   });
 }
 

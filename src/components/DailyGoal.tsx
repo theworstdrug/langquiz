@@ -2,10 +2,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Link } from 'react-router-dom';
 import { db } from '../lib/db';
 import { today } from '../lib/actions';
-import { streak } from '../lib/stats';
+import { dailyTotals, streak } from '../lib/stats';
 
 export default function DailyGoal({ lang, goal }: { lang: string; goal: number }) {
-  const rows = useLiveQuery(() => db.activity.where({ lang }).toArray(), [lang]);
+  const rows = useLiveQuery(async () => dailyTotals(await db.activity.where({ lang }).toArray()), [lang]);
   if (!rows) return null;
   const t = rows.find((r) => r.date === today());
   const done = t?.lingqsCreated ?? 0;

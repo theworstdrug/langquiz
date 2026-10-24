@@ -5,6 +5,7 @@ import { DEFAULT_DICTIONARIES, updateSettings, type Settings } from '../lib/sett
 import { download, exportBackup, importBackup } from '../lib/backup';
 import { seedSample } from '../lib/sample';
 import { speak, ttsSupported, voicesFor } from '../lib/tts';
+import SyncSettings from '../components/SyncSettings';
 
 export default function SettingsPage({ settings }: { settings: Settings }) {
   const lang = settings.activeLang;
@@ -79,6 +80,8 @@ export default function SettingsPage({ settings }: { settings: Settings }) {
           </select>
         </label>
       </section>
+
+      <SyncSettings />
 
       <section className="card form">
         <h2>Reading</h2>
@@ -178,7 +181,9 @@ export default function SettingsPage({ settings }: { settings: Settings }) {
 
       <section className="card form">
         <h2>Your data</h2>
-        <p className="muted small">Everything is stored in this browser only (IndexedDB). Back up regularly — audio files are not included in backups.</p>
+        <p className="muted small">
+          Everything is stored in this browser (IndexedDB), and in your Google Drive if cloud sync is on. Audio files are not included in backups or sync.
+        </p>
         <div className="row">
           <button onClick={async () => download(await exportBackup(), `langquiz-backup-${new Date().toISOString().slice(0, 10)}.json`)}>Export backup</button>
           <label className="btn">
@@ -201,7 +206,7 @@ export default function SettingsPage({ settings }: { settings: Settings }) {
           <button
             className="danger"
             onClick={async () => {
-              if (!confirm('Delete ALL lessons, vocabulary and stats? This cannot be undone.')) return;
+              if (!confirm('Delete ALL lessons, vocabulary and stats on this device? This cannot be undone. (If cloud sync is on, your Drive copy is kept and will sync back.)')) return;
               await db.delete();
               location.reload();
             }}

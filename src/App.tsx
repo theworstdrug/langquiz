@@ -11,9 +11,13 @@ import Stats from './pages/Stats';
 import SettingsPage from './pages/Settings';
 import Onboarding from './pages/Onboarding';
 import DailyGoal from './components/DailyGoal';
+import SyncIndicator from './components/SyncIndicator';
+import { startAutoSync } from './lib/sync';
 
 export default function App() {
   const settings = useSettings();
+
+  useEffect(() => startAutoSync(), []);
 
   useEffect(() => {
     if (!settings) return;
@@ -41,6 +45,7 @@ export default function App() {
           <NavLink to="/settings">Settings</NavLink>
         </nav>
         <div className="topbar-right">
+          <SyncIndicator />
           <DailyGoal lang={lang} goal={settings.dailyGoal} />
           <select
             aria-label="Language you are learning"

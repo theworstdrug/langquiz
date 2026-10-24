@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, KNOWN, type Activity } from '../lib/db';
 import { today } from '../lib/actions';
-import { lastNDays, streak } from '../lib/stats';
+import { dailyTotals, lastNDays, streak } from '../lib/stats';
 import { languageName } from '../lib/languages';
 import type { Settings } from '../lib/settings';
 import BarChart from '../components/BarChart';
@@ -17,7 +17,7 @@ export default function Stats({ settings }: { settings: Settings }) {
       db.terms.where({ lang }).filter((t) => t.status >= 1 && t.status <= 4).count(),
       db.lessons.where({ lang }).toArray(),
     ]);
-    return { activity, known, lingqs, lessons };
+    return { activity: dailyTotals(activity), known, lingqs, lessons };
   }, [lang]);
   if (!data) return <p className="muted">Loading…</p>;
 

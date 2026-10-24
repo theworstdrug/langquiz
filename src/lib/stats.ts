@@ -24,3 +24,18 @@ export function lastNDays(n: number, now = new Date()): string[] {
   }
   return out;
 }
+
+type Counter = 'wordsRead' | 'lingqsCreated' | 'knownAdded' | 'listeningSeconds' | 'reviews' | 'lessonsCompleted';
+const COUNTERS: Counter[] = ['wordsRead', 'lingqsCreated', 'knownAdded', 'listeningSeconds', 'reviews', 'lessonsCompleted'];
+
+/** Sum per-device activity rows into one row per language and day. */
+export function dailyTotals(rows: Activity[]): Activity[] {
+  const byDay = new Map<string, Activity>();
+  for (const r of rows) {
+    const k = `${r.lang}|${r.date}`;
+    const acc = byDay.get(k);
+    if (!acc) byDay.set(k, { ...r });
+    else for (const c of COUNTERS) acc[c] = (acc[c] ?? 0) + (r[c] ?? 0);
+  }
+  return [...byDay.values()];
+}

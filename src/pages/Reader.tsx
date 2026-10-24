@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { db, IGNORED, KNOWN, type Lesson, type Status, type Term } from '../lib/db';
-import { bumpActivity, markWordsKnown, updateLessonText, upsertTerm } from '../lib/actions';
+import { bumpActivity, deleteLesson, markWordsKnown, updateLessonText, upsertTerm } from '../lib/actions';
 import { useTermMap } from '../lib/hooks';
 import { getLanguage } from '../lib/languages';
 import { translate } from '../lib/dictionary';
@@ -606,7 +606,7 @@ function EditLesson({ lesson, onDone }: { lesson: Lesson; onDone: () => void }) 
           className="danger"
           onClick={async () => {
             if (!confirm('Delete this lesson?')) return;
-            await db.lessons.delete(lesson.id!);
+            await deleteLesson(lesson.id!);
             nav('/');
           }}
         >
