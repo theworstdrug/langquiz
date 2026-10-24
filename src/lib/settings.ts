@@ -16,7 +16,7 @@ export interface Settings {
   autoKnownOnPageTurn: boolean;
   fontSize: number;
   lineHeight: number;
-  theme: 'system' | 'light' | 'dark';
+  theme: 'system' | 'light' | 'dark' | 'oled';
   ttsRate: number;
   ttsVoice: Record<string, string>;
   autoTranslate: boolean;

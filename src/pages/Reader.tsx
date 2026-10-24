@@ -421,7 +421,7 @@ export default function Reader({ settings }: { settings: Settings }) {
           className="reader-text"
           dir={rtl ? 'rtl' : undefined}
           lang={lang}
-          style={{ fontSize: settings.fontSize, lineHeight: settings.lineHeight }}
+          style={{ ['--reader-font' as string]: `${settings.fontSize}px`, lineHeight: settings.lineHeight }}
           onPointerDown={(e) => (e.target as HTMLElement).classList.contains('reader-text') && select(null)}
         >
           {sentenceMode ? (

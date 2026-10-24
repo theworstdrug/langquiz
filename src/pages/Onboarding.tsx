@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { LANGUAGES } from '../lib/languages';
-import { updateSettings } from '../lib/settings';
+import { getSettings, updateSettings } from '../lib/settings';
 import { seedSample } from '../lib/sample';
-import { getSettings } from '../lib/settings';
-import { clientId, setClientId, syncNow } from '../lib/sync';
+import { clientId, connectDriveApi, connectFolder, folderSupported, isMobileDevice, setClientId } from '../lib/sync';
 
 export default function Onboarding() {
   const [target, setTarget] = useState('es');
@@ -13,18 +12,19 @@ export default function Onboarding() {
   const [cid, setCid] = useState(clientId());
   const [error, setError] = useState('');
 
-  const restore = async () => {
+  const restore = async (connect: () => Promise<void>) => {
     setError('');
     setRestoring(true);
     try {
-      if (cid.trim() !== clientId()) setClientId(cid);
-      await syncNow(true);
+      await connect();
       const s = await getSettings();
-      if (!s.languages.length) throw new Error('No LangQuiz data found in this Google Drive yet. Set up below, then connect sync in Settings.');
+      if (!s.languages.length) {
+        throw new Error('Connected, but there is no LangQuiz data there yet. Finish the setup above; this device will sync from now on.');
+      }
       // The active language is per device, so pick one from the synced list.
       await updateSettings({ activeLang: s.languages[0] });
     } catch (e) {
-      setError((e as Error).message);
+      if ((e as DOMException).name !== 'AbortError') setError((e as Error).message);
     } finally {
       setRestoring(false);
     }
@@ -71,16 +71,28 @@ export default function Onboarding() {
         Start learning
       </button>
       <details className="restore">
-        <summary>Already use LangQuiz on another device? Sync from Google Drive</summary>
+        <summary>Already use LangQuiz on another device? Restore your data</summary>
         <div className="form">
+          <p className="muted small">Use the same sync method as your other devices.</p>
+          {folderSupported() && !isMobileDevice() && (
+            <button onClick={() => restore(connectFolder)} disabled={restoring}>
+              📁 Choose your sync folder…
+            </button>
+          )}
           {!clientId() && (
             <label>
-              Google client ID (the same one you use on your other device)
+              Google client ID (the same one your other devices use)
               <input value={cid} onChange={(e) => setCid(e.target.value)} placeholder="….apps.googleusercontent.com" />
             </label>
           )}
-          <button onClick={restore} disabled={restoring || !cid.trim()}>
-            {restoring ? 'Syncing…' : 'Connect Google Drive'}
+          <button
+            onClick={() => {
+              if (cid.trim() !== clientId()) setClientId(cid);
+              restore(connectDriveApi);
+            }}
+            disabled={restoring || !cid.trim()}
+          >
+            {restoring ? 'Syncing…' : 'Sign in to Google Drive'}
           </button>
           {error && <div className="error small">{error}</div>}
         </div>

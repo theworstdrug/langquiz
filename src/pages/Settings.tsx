@@ -119,6 +119,7 @@ export default function SettingsPage({ settings }: { settings: Settings }) {
             <option value="system">System</option>
             <option value="light">Light</option>
             <option value="dark">Dark</option>
+            <option value="oled">OLED black</option>
           </select>
         </label>
       </section>

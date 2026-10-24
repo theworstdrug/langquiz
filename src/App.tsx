@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { languageName } from './lib/languages';
 import { updateSettings, useSettings } from './lib/settings';
@@ -11,17 +11,45 @@ import Stats from './pages/Stats';
 import SettingsPage from './pages/Settings';
 import Onboarding from './pages/Onboarding';
 import DailyGoal from './components/DailyGoal';
+import NavIcon from './components/NavIcon';
 import SyncIndicator from './components/SyncIndicator';
 import { startAutoSync } from './lib/sync';
+
+const NAV: [string, string, string][] = [
+  ['/', 'Library', 'library'],
+  ['/import', 'Import', 'import'],
+  ['/vocabulary', 'Vocabulary', 'vocabulary'],
+  ['/review', 'Review', 'review'],
+  ['/stats', 'Stats', 'stats'],
+  ['/settings', 'Settings', 'settings'],
+];
 
 export default function App() {
   const settings = useSettings();
 
   useEffect(() => startAutoSync(), []);
 
+  // Expose the top bar's height so sticky elements (e.g. a pinned video) can sit below it.
+  const topbar = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = topbar.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', `${el.offsetHeight}px`));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [settings?.activeLang]);
+
   useEffect(() => {
     if (!settings) return;
-    document.documentElement.dataset.theme = settings.theme;
+    const root = document.documentElement;
+    root.dataset.theme = settings.theme;
+    // Match the browser/OS chrome (address bar, status bar) to the page background.
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const apply = () => meta?.setAttribute('content', getComputedStyle(root).getPropertyValue('--chrome').trim() || '#fcfcfb');
+    apply();
+    const mq = matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
   }, [settings]);
 
   if (!settings) return null;
@@ -30,19 +58,17 @@ export default function App() {
   const lang = settings.activeLang;
   return (
     <div className="app">
-      <header className="topbar">
+      <header className="topbar" ref={topbar}>
         <NavLink to="/" className="brand">
           LangQuiz
         </NavLink>
-        <nav className="nav">
-          <NavLink to="/" end>
-            Library
-          </NavLink>
-          <NavLink to="/import">Import</NavLink>
-          <NavLink to="/vocabulary">Vocabulary</NavLink>
-          <NavLink to="/review">Review</NavLink>
-          <NavLink to="/stats">Stats</NavLink>
-          <NavLink to="/settings">Settings</NavLink>
+        <nav className="nav" aria-label="Main">
+          {NAV.map(([to, label, icon]) => (
+            <NavLink key={to} to={to} end={to === '/'}>
+              <NavIcon name={icon} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
         </nav>
         <div className="topbar-right">
           <SyncIndicator />
