@@ -431,3 +431,8 @@ html { font-size: clamp(15px, 14px + 0.15vw, 17px); -webkit-text-size-adjust: 10
 .day-picker button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .reminder-notes p { margin: 0; }
 @media (max-width: 599px) { .reminder-grid { grid-template-columns: 1fr; } }
+
+/* Speech problems */
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--nav-h, 0px) + 16px); z-index: 50; display: flex; align-items: center; gap: 12px; max-width: min(560px, calc(100vw - 32px)); padding: 10px 12px 10px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.2); font-size: 0.9rem; }
+.voice-help ul { margin: 6px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.voice-help p { margin: 4px 0; }

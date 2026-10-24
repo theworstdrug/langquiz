@@ -4,7 +4,7 @@ import { LANGUAGES, languageName } from '../lib/languages';
 import { DEFAULT_DICTIONARIES, updateSettings, type Settings } from '../lib/settings';
 import { download, exportBackup, importBackup } from '../lib/backup';
 import { seedSample } from '../lib/sample';
-import { speak, ttsSupported, voicesFor } from '../lib/tts';
+import { loadVoices, SAMPLE_PHRASES, speak, ttsSupported, voicesFor } from '../lib/tts';
 import SyncSettings from '../components/SyncSettings';
 import ReminderSettings from '../components/ReminderSettings';
 
@@ -13,10 +13,15 @@ export default function SettingsPage({ settings }: { settings: Settings }) {
   const [addLang, setAddLang] = useState('');
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
+
   useEffect(() => {
     if (!ttsSupported()) return;
     const load = () => setVoices(voicesFor(lang));
-    load();
+    loadVoices().then(() => {
+      load();
+      setVoicesLoaded(true);
+    });
     speechSynthesis.addEventListener('voiceschanged', load);
     return () => speechSynthesis.removeEventListener('voiceschanged', load);
   }, [lang]);
@@ -143,13 +148,22 @@ export default function SettingsPage({ settings }: { settings: Settings }) {
                   </option>
                 ))}
               </select>
-              {voices.length === 0 && <span className="muted small">No {languageName(lang)} voices installed on this device.</span>}
+              <span className="muted small">
+                {!voicesLoaded ? 'Checking installed voices…' : `${voices.length} ${languageName(lang)} voice${voices.length === 1 ? '' : 's'} on this device.`}
+              </span>
             </label>
+            {voicesLoaded && voices.length === 0 && <VoiceHelp language={languageName(lang)} />}
             <label>
               Speed: {settings.ttsRate}×
               <input type="range" min={0.5} max={1.5} step={0.05} value={settings.ttsRate} onChange={(e) => set({ ttsRate: Number(e.target.value) })} />
             </label>
-            <button onClick={() => speak(LANGUAGES.find((l) => l.code === lang)?.name ?? 'Hello', lang, { rate: settings.ttsRate, voice: settings.ttsVoice[lang] })}>Test voice</button>
+            <button onClick={() => speak(SAMPLE_PHRASES[lang] ?? languageName(lang), lang, { rate: settings.ttsRate, voice: settings.ttsVoice[lang] })}>🔊 Test voice</button>
+            {voicesLoaded && voices.length > 0 && (
+              <details className="small">
+                <summary className="muted">Voice not working?</summary>
+                <VoiceHelp language={languageName(lang)} />
+              </details>
+            )}
           </>
         )}
       </section>
@@ -219,6 +233,34 @@ export default function SettingsPage({ settings }: { settings: Settings }) {
           </button>
         </div>
       </section>
+    </div>
+  );
+}
+
+function VoiceHelp({ language }: { language: string }) {
+  return (
+    <div className="voice-help small">
+      <p>
+        Speech uses the voices built into your device. To add a {language} voice:
+      </p>
+      <ul>
+        <li>
+          <strong>iPhone / iPad:</strong> Settings → Accessibility → Spoken Content → Voices → {language}. Also check the ring/silent switch, since silent mode mutes speech.
+        </li>
+        <li>
+          <strong>Android:</strong> Settings → System → Languages → Text-to-speech output → Google engine settings (⚙) → Install voice data → {language}.
+        </li>
+        <li>
+          <strong>Windows:</strong> Settings → Time &amp; language → Speech → Add voices → {language}, then restart the browser.
+        </li>
+        <li>
+          <strong>Mac:</strong> System Settings → Accessibility → Spoken Content → System voice → Manage Voices → {language}.
+        </li>
+        <li>
+          <strong>Linux / Chromebook:</strong> few voices are included. Microsoft Edge or Chrome's online "Google" voices usually work best.
+        </li>
+      </ul>
+      <p>After installing, reload LangQuiz and pick the voice above.</p>
     </div>
   );
 }

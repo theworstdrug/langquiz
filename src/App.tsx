@@ -15,6 +15,8 @@ import NavIcon from './components/NavIcon';
 import SyncIndicator from './components/SyncIndicator';
 import { startAutoSync } from './lib/sync';
 import { startReminderChecks } from './lib/reminders';
+import { unlockSpeechOnFirstTap } from './lib/tts';
+import TtsToast from './components/TtsToast';
 
 const NAV: [string, string, string][] = [
   ['/', 'Library', 'library'],
@@ -31,6 +33,7 @@ export default function App() {
   useEffect(() => {
     startAutoSync();
     startReminderChecks();
+    unlockSpeechOnFirstTap();
   }, []);
 
   // Expose the top bar's height so sticky elements (e.g. a pinned video) can sit below it.
@@ -97,6 +100,7 @@ export default function App() {
           </select>
         </div>
       </header>
+      <TtsToast />
       <main className="main">
         <Routes>
           <Route path="/" element={<Library lang={lang} />} />
